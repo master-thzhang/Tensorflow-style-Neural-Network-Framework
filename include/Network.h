@@ -40,9 +40,9 @@ public:
     void ReLU(const int *shape, float ***data);
     void ReLU(const int *shape, float *data);
 
-    void LeakyReLU(const int *shape, float *data);
-    void LeakyReLU(const int *shape, float **data);
-    void LeakyReLU(const int *shape, float ***data);
+    void LeakyReLU(const int *shape, float *data, float alpha);
+    void LeakyReLU(const int *shape, float **data, float alpha);
+    void LeakyReLU(const int *shape, float ***data, float alpha);
 
     // Fixed Layers
     void FixedConv2d(const int *shape_src, float ***src, const int *shape_dst, float ***dst, const int *kernal_size,
