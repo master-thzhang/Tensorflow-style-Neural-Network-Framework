@@ -8,7 +8,7 @@
 *To import a tensorflow graph to our C++ framework, there are four steps:*
 1. Define your network in a header file as a configuration. The "DAC_include.h" is a good example which shows how to define your network. It is recommended that you write a specific configuration for each network you define. Then include this configuration file in Network.cpp.
 2. Allocate memory for weight/bias/activation in Constructor Network::Network() using function: Network::AllocateMem(args *), and shapes from 1D to 4D are supported. Refer to "Network.h" for usage.
-3. Preload weights from txt File. Please note that the convolutional weights are stored in [H,W,I,O] format, fully-connected weights are stored in [I,O] format. The preload process is implemented in Network::SetNet() by calling function Network::SetLayer(). Change the code inside for your own network. 
+3. Preload weights from txt File. The file "NETNAME.h" tells you where the weight come from, and you can change whatever you like. Please note that the convolutional weights are stored in [H,W,I,O] format, fully-connected weights are stored in [I,O] format. The preload process is implemented in Network::SetNet() by calling function Network::SetLayer(). Change the code inside for your own network. 
 
 *Note that since the framework supports quantization, if you do not to use quantization, enable the*
 ``` c++ 
