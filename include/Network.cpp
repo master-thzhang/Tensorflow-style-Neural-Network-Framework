@@ -714,3 +714,51 @@ void Network::Prune_Weights() {
     std::cout << tot << " parameters total, " << ratio << " parameters pruned" << std::endl;
     std::cout << ratio / tot * 100 << " percent Prune rate" << std::endl;
 }
+
+void Network::LeakyReLU(const int *shape, float *data, float alpha) {
+    for (int i=0; i<shape[0]; i++){
+        float maxn, minn;
+        if (data[i]>0) {
+            maxn = data[i];
+            minn = 0;
+        }
+        else{
+            maxn = 0;
+            minn = data[i];
+        }
+        data[i] = maxn + alpha * minn;
+    }
+}
+
+void Network::LeakyReLU(const int *shape, float **data, float alpha) {
+    for (int i=0; i<shape[0]; i++)
+        for (int j=0; j<shape[1]; j++){
+            float maxn, minn;
+            if (data[i][j]>0) {
+                maxn = data[i][j];
+                minn = 0;
+            }
+            else{
+                maxn = 0;
+                minn = data[i][j];
+            }
+            data[i][j] = maxn + alpha * minn;
+        }
+}
+
+void Network::LeakyReLU(const int *shape, float ***data, float alpha) {
+    for (int i=0; i<shape[0]; i++)
+        for (int j=0; j<shape[1]; j++)
+            for (int k=0; k<shape[2]; k++){
+                float maxn, minn;
+                if (data[i][j]>0) {
+                    maxn = data[i][j][k];
+                    minn = 0;
+                }
+                else{
+                    maxn = 0;
+                    minn = data[i][j][k];
+                }
+                data[i][j][k] = maxn + alpha * minn;
+            }
+}
