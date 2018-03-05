@@ -3,7 +3,7 @@
 ## Usage
 1. Download the Repository and copy the files in 'include' folder to your own project 'include' folder
 2. include 'Network.h' in your source code.
-3. Instantialize Class Network, and use the functions inside. Refer to file Network.h to see all the definitions and utilities of each candidate function of class Network.
+3. Instantialize Class *Network*, and use the functions inside. Refer to file Network.h to see all the definitions and utilities of each candidate function of class Network.
 ## Import a graph
 *To import a tensorflow graph to our C++ framework, there are four steps:*
 1. Define your network in a header file as a configuration. The "DAC_include.h" is a good example which shows how to define your network. It is recommended that you write a specific configuration for each network you define. Then include this configuration file in Network.cpp.
@@ -54,3 +54,28 @@ int main(){
   
 }
 ```
+## Major Realized Functions
+#### Network::Conv2D(args *):
+Convolutional Neural network operation, using tensorflow-style padding.
+
+*Supports:2D Convolution with any ksize, stride and pad.*
+#### Network::InnerProduct(args *):
+Fully-connected layer operation.
+
+*Supports:2D InnerProduct with any size*
+#### Network::ReLU(args *):
+Rectified Linear Unit.
+
+*Supports: 1D/3D activation function*
+#### Network::AllocateMem(args *):
+Memory Allocator.
+
+*Supports: 1D/2D/3D/4D Memory Allocation.*
+#### Network::MaxPool(args *):
+Max-pool function.
+
+*Supports: Max-pool with any ksize and stride.*
+#### Network::SetLayer(args *):
+Layer Weight preloader.
+
+*Supports: Any layer with any bit-width weights.*
