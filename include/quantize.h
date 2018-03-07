@@ -2,67 +2,19 @@
 // Created by demo02 on 18-1-30.
 //
 
-#ifndef FORWARD_TOOLS_H
-#define FORWARD_TOOLS_H
+#ifndef FORWARD_QUANTIZE_H
+#define FORWARD_QUANTIZE_H
 
 #include <cmath>
 #include <cstring>
 
 
-#define MAXRANGE    2
-#define MINRANGE    (-2)
+#define MAXRANGE    8
+#define MINRANGE    (-8)
 
-#define SHIFT_QUANTIZE
+
 #define NO_QUANTIZE
 
-#ifndef SHIFT_QUANTIZE
-
-#define CONV1_1_W_SHL	0
-#define CONV1_1_B_SHL	0
-#define CONV1_2_W_SHL	0
-#define CONV1_2_B_SHL	0
-#define CONV1_3_W_SHL	0
-#define CONV1_3_B_SHL	0
-#define CONV2_1_W_SHL	0
-#define CONV2_1_B_SHL	0
-#define CONV2_2_W_SHL	0
-#define CONV2_2_B_SHL	0
-#define CONV3_1_W_SHL	0
-#define CONV3_1_B_SHL	0
-#define CONV3_2_W_SHL	0
-#define CONV3_2_B_SHL	0
-#define CONV4_1_W_SHL	0
-#define CONV4_1_B_SHL	0
-#define FC1_W_SHL	0
-#define FC1_B_SHL	0
-#define FC2_W_SHL	0
-#define FC2_B_SHL	0
-
-#else
-
-#define CONV1_1_W_SHL	2
-#define CONV1_1_B_SHL	1
-#define CONV1_2_W_SHL	0
-#define CONV1_2_B_SHL	2
-#define CONV1_3_W_SHL	0
-#define CONV1_3_B_SHL	2
-#define CONV2_1_W_SHL	0
-#define CONV2_1_B_SHL	2
-#define CONV2_2_W_SHL	0
-#define CONV2_2_B_SHL	2
-#define CONV3_1_W_SHL	0
-#define CONV3_1_B_SHL	1
-#define CONV3_2_W_SHL	0
-#define CONV3_2_B_SHL	1
-#define CONV4_1_W_SHL	0
-#define CONV4_1_B_SHL	2
-#define FC1_W_SHL	0
-#define FC1_B_SHL	1
-#define FC2_W_SHL	1
-#define FC2_B_SHL	1
-
-
-#endif
 
 
 float quantize(float num, int bits, int shift){
@@ -113,8 +65,4 @@ float quantize(float num, int bits, int shift){
 #endif
 }
 
-
-
-
-
-#endif //FORWARD_TOOLS_H
+#endif //FORWARD_QUANTIZE_H
