@@ -84,3 +84,7 @@ Layer Weight preloader.
 Layer Weight preloader.
 
 *Supports: Leaky Rectified Linear Unit, and alpha is recommended to be set to 0.1.*
+#### Network::Transpose(args *):
+Switch the dimension. Now only configuration [2,0,1] is implemented for Py-yolo.
+
+*Supports: [2,0,1] dimension switch only.
