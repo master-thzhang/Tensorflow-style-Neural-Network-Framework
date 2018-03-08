@@ -60,8 +60,11 @@ public:
     float Pruning(float ***data, float d_th, const int shape[], const char *name);
     float Pruning(float ****data, float d_th, const int shape[], const char *name);
 
+    // Transpose
+    void Transpose3D(const int shape_src[], float ***src, const int shape_dst[], float ***dst, int cfg[]);
 
 private:
+    void Transpose3D_201(const int shape_src[], float ***src, const int shape_dst[], float ***dst);
 
 
 };

@@ -484,3 +484,16 @@ void Network::LeakyReLU(const int *shape, float ***data, float alpha) {
                 data[i][j][k] = maxn + alpha * minn;
             }
 }
+
+void Network::Transpose3D(const int *shape_src, float ***src, const int *shape_dst, float ***dst, int *cfg) {
+    if ((cfg[0] == 2) && (cfg[1] == 0) && (cfg[2] == 1)){
+        Transpose3D_201(shape_src, src, shape_dst, dst);
+    }
+}
+
+void Network::Transpose3D_201(const int *shape_src, float ***src, const int *shape_dst, float ***dst) {
+    for (int d1=0; d1<shape_src[0]; d1++)
+        for (int d2=0; d2<shape_src[1]; d2++)
+            for (int d3=0; d3<shape_src[2]; d3++)
+                dst[d3][d1][d2] = src[d1][d2][d3];
+}
