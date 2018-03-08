@@ -3,12 +3,12 @@
 ## Usage
 1. Download the Repository and copy the files in 'include' folder to your own project 'include' folder
 2. include 'Network.h' in your source code.
-3. Instantialize Class *Network*, and use the functions inside. Refer to file Network.h to see all the definitions and utilities of each candidate function of class Network.
+3. Create a new class which inherit from the base class *Network*, and use the functions inside. Refer to file net_def/DAC/NetDAC.h to see all the definitions and utilities of each candidate function of class Network. The new class allocates memory for each layer and operates the whole graph.
 ## Import a graph
-*To import a tensorflow graph to our C++ framework, there are four steps:*
-1. Define your network in a header file as a configuration. The "DAC_include.h" is a good example which shows how to define your network. It is recommended that you write a specific configuration for each network you define. Then include this configuration file in Network.cpp.
-2. Allocate memory for weight/bias/activation in Constructor Network::Network() using function: Network::AllocateMem(args *), and shapes from 1D to 4D are supported. Refer to "Network.h" for usage.
-3. Preload weights from txt File. The file "NETNAME.h" tells you where the weight come from, and you can change whatever you like. Please note that the convolutional weights are stored in [H,W,I,O] format, fully-connected weights are stored in [I,O] format. The preload process is implemented in Network::SetNet() by calling function Network::SetLayer(). Change the code inside for your own network. 
+*Suppose your network class is called Netdef and inherit from basr class Network. To import a tensorflow graph to our C++ framework, there are four steps:*
+1. Define your network in a header file as a configuration. The "net_def/DAC/DAC_include.h" is a good example which shows how to define your network. It is recommended that you write a specific configuration for each network you define. Then include this configuration file in Network.cpp.
+2. Allocate memory for weight/bias/activation in your network Constructor Netdef::Netdef() using function: Network::AllocateMem(args *), and shapes from 1D to 4D are supported. Refer to "Network.h" for usage.
+3. Preload weights from txt File. The file "net_def/DAC/NETNAME.h" tells you where the weight come from, and you can change whatever you like. Please note that the convolutional weights are stored in [H,W,I,O] format, fully-connected weights are stored in [I,O] format. The preload process should be implemented in Netdef::SetNet() by calling function Network::SetLayer(). Change the code inside for your own network. 
 
 *Note that since the framework supports quantization, if you do not to use quantization, enable the*
 ``` c++ 
@@ -16,7 +16,7 @@
 ```
 *in "quantize.h", and set all args representing bit width to 32, and all args representing shifts to 0. Just simply enable the flag NO_QUANTIZE is also fine.*
 
-4. Write the graph layers in Network::Forward. Refer to "Network.h" for all support functions.
+4. Write the graph layers in Netdef::Forward(). Refer to "Network.h" for all support functions.
 ## Quantization
 If you want to use quantization, uncomment the 
 ``` c++ 
@@ -27,7 +27,7 @@ In "quantize.h". Each layer (Conv2D/InnerProduct) can be configured with differe
 #define MAXRANGE    2
 #define MINRANGE    (-2)
 ```
-in "quantize.h".
+in "include/quantize.h".
 If you want to disable Shift functionality, uncomment the line:
 ``` c++
 #define SHIFT_QUANTIZE
@@ -54,6 +54,7 @@ int main(){
   
 }
 ```
+A demo example is main.cpp. Refer to the example for further details.
 ## Major Realized Functions
 #### Network::Conv2D(args *):
 Convolutional Neural network operation, using tensorflow-style padding.
@@ -79,3 +80,7 @@ Max-pool function.
 Layer Weight preloader.
 
 *Supports: Any layer with any bit-width weights.*
+#### Network::LeakyReLU(args *):
+Layer Weight preloader.
+
+*Supports: Leaky Rectified Linear Unit, and alpha is recommended to be set to 0.1.*
