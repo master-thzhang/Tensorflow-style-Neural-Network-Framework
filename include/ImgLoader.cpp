@@ -6,6 +6,7 @@
 #include "ImgLoader.h"
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 
 #include "jpeglib.h"
 
@@ -25,7 +26,7 @@ void ImgLoader::SetImageSize(int size_w, int size_h, int num_channels) {
 
 void ImgLoader::MemAlloc() {
     long memcnt = size_h_ * size_w_ * num_channels_;
-    data_ = (float *) malloc(sizeof(float) * memcnt);
+    data_ = (double *) malloc(sizeof(double) * memcnt);
 }
 
 void ImgLoader::Imread(char *fname) {
@@ -50,7 +51,7 @@ void ImgLoader::Imread(char *fname) {
     {
         jpeg_read_scanlines( &cinfo, row_pointer, 1 );
         for( i=0; i<cinfo.image_width*cinfo.num_components;i++)
-            data_[location++] = float(row_pointer[0][i]) / 255.;
+            data_[location++] = double(row_pointer[0][i]) / 255.;
     }
     jpeg_finish_decompress( &cinfo );
     jpeg_destroy_decompress( &cinfo );
@@ -71,13 +72,65 @@ void ImgLoader::ImWrite2txt_RGB() {
     fp3 = fopen(FP3_W, "w");
     for (long i=0; i<size_w_*size_h_*num_channels_; i++)
         if (i % 3 ==1)
-            fprintf(fp1, "%f\n", data_[i]);
+            fprintf(fp1, "%lf\n", data_[i]);
         else if (i % 3 == 2)
-            fprintf(fp2, "%f\n", data_[i]);
+            fprintf(fp2, "%lf\n", data_[i]);
         else
-            fprintf(fp3, "%f\n", data_[i]);
+            fprintf(fp3, "%lf\n", data_[i]);
     fclose(fp1);
     fclose(fp2);
     fclose(fp3);
 }
 
+void ImgLoader::Imresize(int ratio_numerator, int ratio_denumerator) {
+    Upsampling(ratio_numerator);
+    Downsampling(ratio_denumerator);
+}
+
+void ImgLoader::Upsampling(int sample_ratio) {
+    double *data_gen;
+    data_gen = (double *) malloc(size_h_ * size_w_ * num_channels_ * sample_ratio * sample_ratio * sizeof(double *));
+    for (int k=0; k<num_channels_; k++)
+        for (int i=0; i<size_h_; i++)
+            for (int j=0; j<size_w_; j++)
+                for (int d1=0; d1<sample_ratio; d1++)
+                    for (int d2=0; d2<sample_ratio; d2++){
+                        long index = ((i*sample_ratio+d1)*size_w_*num_channels_ + (j*sample_ratio+d2) * num_channels_ + k);
+                        long index_q11 = (i*size_w_*num_channels_) + (j*num_channels_) + k;
+                        long index_q12 = (i*size_w_*num_channels_) + ((j+1)*num_channels_) + k;
+                        long index_q21 = ((i+1)*size_w_*num_channels_) + (j*num_channels_) + k;
+                        long index_q22 = ((i+1)*size_w_*num_channels_) + ((j+1)*num_channels_) + k;
+                        data_gen[index] = double((data_[index_q11] * (sample_ratio-d1) * (sample_ratio-d2)
+                                          + data_[index_q12] * (sample_ratio-d1) * d2
+                                          + data_[index_q21] * d1 * (sample_ratio-d2)
+                                          + data_[index_q22] * d1 * d2) * (1. / double(sample_ratio) / double(sample_ratio)));
+                    }
+    delete [] data_;
+    size_h_ = size_h_ * sample_ratio;
+    size_w_ = size_w_ * sample_ratio;
+    data_ = (double *) malloc(size_h_ * size_w_ * num_channels_ * sizeof(double *));
+    for (int p=0; p<size_h_*size_w_*num_channels_; p++)
+        data_[p] = data_gen[p];
+    delete [] data_gen;
+}
+
+void ImgLoader::Downsampling(int sample_ratio) {
+    double *data_gen;
+    data_gen = (double *) malloc(size_h_ * size_w_ * num_channels_ / sample_ratio / sample_ratio * sizeof(double *));
+    for (int k=0; k<num_channels_; k++)
+        for (int i=0; i<size_h_; i++)
+            for (int j=0; j<size_w_; j++)
+                if ((i % sample_ratio == 0) && (j % sample_ratio == 0)){
+                    long index = (i*size_w_*num_channels_/sample_ratio) + (j*num_channels_/sample_ratio) + k;
+                    long index_src = (i*size_w_*num_channels_) + (j*num_channels_) + k;
+                    data_gen[index] = data_[index_src];
+                }
+    delete [] data_;
+    size_h_ = size_h_ / sample_ratio;
+    size_w_ = size_w_ / sample_ratio;
+    data_ = (double *) malloc(size_h_ * size_w_ * num_channels_ * sizeof(double *));
+    for (int p=0; p<size_h_*size_w_*num_channels_; p++)
+        data_[p] = data_gen[p];
+    delete [] data_gen;
+
+}
