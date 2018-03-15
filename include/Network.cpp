@@ -216,7 +216,7 @@ void Network::MaxPool(const int *shape_src, double ***src, const int *shape_dst,
     for (int d3=0; d3<shape_src[2]; d3++)
         for (int d1=0; d1<shape_dst[0]; d1++)
             for (int d2=0; d2<shape_dst[1]; d2++){
-                double maxn = 0.0;
+                double maxn = -900.0;
                 for (int k1=0; k1<ksize[1]; k1++)
                     for (int k2=0; k2<ksize[2]; k2++)
                         if (src[d1*stride[1]+k1][d2*stride[2]+k2][d3]>maxn)
