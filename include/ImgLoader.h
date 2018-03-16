@@ -12,12 +12,13 @@ public:
     void SetImageSize(int size_w, int size_h, int num_channels);
     void MemAlloc();
     void Imread(char *fname);
-    void Imresize(int ratio_numerator, int ratio_denumerator);
+    void Imresize(double ratio);
     void ImWrite2txt_RGB();
-private:
+    void FetchData(int shape[], unsigned char ***data);
     double *data_;
     int size_w_, size_h_, num_channels_;
-
+private:
+    void Imresize(int ratio_numerator, int ratio_denumerator);
     void Upsampling(int sample_ratio);
     void Downsampling(int sample_ratio);
 };

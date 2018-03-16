@@ -6,9 +6,15 @@
 #include "ImgLoader.h"
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
+#include <iostream>
+
 
 #include "jpeglib.h"
+
+
+double absf(double x){
+    return x>0? x: -x;
+}
 
 
 ImgLoader::ImgLoader() {
@@ -87,6 +93,19 @@ void ImgLoader::Imresize(int ratio_numerator, int ratio_denumerator) {
     Downsampling(ratio_denumerator);
 }
 
+void ImgLoader::Imresize(double ratio) {
+    int ratio_num = int(ratio*9999);
+    int ratio_denum = 1;
+    for (int i=1; i<100; i++)
+        for (int j=1; j<100; j++)
+            if (absf((double(j) / double(i)) - ratio) < absf((double(ratio_num) / double(ratio_denum)) - ratio)){
+                ratio_denum = i;
+                ratio_num = j;
+            }
+    std::cout << "Up sampling ratio: " << ratio_num << "  Downsamling ratio: " << ratio_denum << std::endl;
+    Imresize(ratio_num, ratio_denum);
+}
+
 void ImgLoader::Upsampling(int sample_ratio) {
     double *data_gen;
     data_gen = (double *) malloc(size_h_ * size_w_ * num_channels_ * sample_ratio * sample_ratio * sizeof(double *));
@@ -95,7 +114,7 @@ void ImgLoader::Upsampling(int sample_ratio) {
             for (int j=0; j<size_w_; j++)
                 for (int d1=0; d1<sample_ratio; d1++)
                     for (int d2=0; d2<sample_ratio; d2++){
-                        long index = ((i*sample_ratio+d1)*size_w_*num_channels_ + (j*sample_ratio+d2) * num_channels_ + k);
+                        long index = ((i*sample_ratio+d1)*size_w_*sample_ratio*num_channels_ + (j*sample_ratio+d2) * num_channels_ + k);
                         long index_q11 = (i*size_w_*num_channels_) + (j*num_channels_) + k;
                         long index_q12 = (i*size_w_*num_channels_) + ((j+1)*num_channels_) + k;
                         long index_q21 = ((i+1)*size_w_*num_channels_) + (j*num_channels_) + k;
@@ -121,7 +140,7 @@ void ImgLoader::Downsampling(int sample_ratio) {
         for (int i=0; i<size_h_; i++)
             for (int j=0; j<size_w_; j++)
                 if ((i % sample_ratio == 0) && (j % sample_ratio == 0)){
-                    long index = (i*size_w_*num_channels_/sample_ratio) + (j*num_channels_/sample_ratio) + k;
+                    long index = (i*size_w_*num_channels_/sample_ratio/sample_ratio) + (j*num_channels_/sample_ratio) + k;
                     long index_src = (i*size_w_*num_channels_) + (j*num_channels_) + k;
                     data_gen[index] = data_[index_src];
                 }
@@ -133,4 +152,15 @@ void ImgLoader::Downsampling(int sample_ratio) {
         data_[p] = data_gen[p];
     delete [] data_gen;
 
+}
+
+void ImgLoader::FetchData(int *shape, unsigned char ***data) {
+    shape[0] = size_h_;
+    shape[1] = size_w_;
+    shape[2] = num_channels_;
+    int cnt = 0;
+    for (int i=0; i<size_h_; i++)
+        for (int j=0; j<size_w_; j++)
+            for (int k=0; k<num_channels_; k++)
+                data[i][j][k] = (unsigned char) int(data_[cnt++] * 255);
 }
