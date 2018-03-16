@@ -5,6 +5,13 @@
 #ifndef FORWARD_IMGLOADER_H
 #define FORWARD_IMGLOADER_H
 
+#define IMG_U8_BLACK    0
+#define IMG_U8_WHITE    1
+#define IMG_U8_RED      2
+#define IMG_U8_GREEN    3
+#define IMG_U8_BLUE     4
+#define IMG_U8_YELLO    5
+#define IMG_U8_PURPLE   6
 
 class ImgLoader {
 public:
@@ -12,15 +19,17 @@ public:
     void SetImageSize(int size_w, int size_h, int num_channels);
     void MemAlloc();
     void Imread(char *fname);
-    void Imresize(double ratio);
     void ImWrite2txt_RGB();
     void FetchData(int shape[], unsigned char ***data);
+    void Imresize(int *shape);
+
+    // Draw shape
+    void Draw_rectangle(int xmin, int xmax, int ymin, int ymax, int COLOR);
+
+
+    // Data segment
     double *data_;
     int size_w_, size_h_, num_channels_;
-private:
-    void Imresize(int ratio_numerator, int ratio_denumerator);
-    void Upsampling(int sample_ratio);
-    void Downsampling(int sample_ratio);
 };
 
 

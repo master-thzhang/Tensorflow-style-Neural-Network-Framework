@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
+#include <csignal>
 
 
 #include "jpeglib.h"
@@ -15,6 +16,8 @@
 double absf(double x){
     return x>0? x: -x;
 }
+
+
 
 
 ImgLoader::ImgLoader() {
@@ -88,71 +91,6 @@ void ImgLoader::ImWrite2txt_RGB() {
     fclose(fp3);
 }
 
-void ImgLoader::Imresize(int ratio_numerator, int ratio_denumerator) {
-    Upsampling(ratio_numerator);
-    Downsampling(ratio_denumerator);
-}
-
-void ImgLoader::Imresize(double ratio) {
-    int ratio_num = int(ratio*9999);
-    int ratio_denum = 1;
-    for (int i=1; i<100; i++)
-        for (int j=1; j<100; j++)
-            if (absf((double(j) / double(i)) - ratio) < absf((double(ratio_num) / double(ratio_denum)) - ratio)){
-                ratio_denum = i;
-                ratio_num = j;
-            }
-    std::cout << "Up sampling ratio: " << ratio_num << "  Downsamling ratio: " << ratio_denum << std::endl;
-    Imresize(ratio_num, ratio_denum);
-}
-
-void ImgLoader::Upsampling(int sample_ratio) {
-    double *data_gen;
-    data_gen = (double *) malloc(size_h_ * size_w_ * num_channels_ * sample_ratio * sample_ratio * sizeof(double *));
-    for (int k=0; k<num_channels_; k++)
-        for (int i=0; i<size_h_; i++)
-            for (int j=0; j<size_w_; j++)
-                for (int d1=0; d1<sample_ratio; d1++)
-                    for (int d2=0; d2<sample_ratio; d2++){
-                        long index = ((i*sample_ratio+d1)*size_w_*sample_ratio*num_channels_ + (j*sample_ratio+d2) * num_channels_ + k);
-                        long index_q11 = (i*size_w_*num_channels_) + (j*num_channels_) + k;
-                        long index_q12 = (i*size_w_*num_channels_) + ((j+1)*num_channels_) + k;
-                        long index_q21 = ((i+1)*size_w_*num_channels_) + (j*num_channels_) + k;
-                        long index_q22 = ((i+1)*size_w_*num_channels_) + ((j+1)*num_channels_) + k;
-                        data_gen[index] = double((data_[index_q11] * (sample_ratio-d1) * (sample_ratio-d2)
-                                          + data_[index_q12] * (sample_ratio-d1) * d2
-                                          + data_[index_q21] * d1 * (sample_ratio-d2)
-                                          + data_[index_q22] * d1 * d2) * (1. / double(sample_ratio) / double(sample_ratio)));
-                    }
-    delete [] data_;
-    size_h_ = size_h_ * sample_ratio;
-    size_w_ = size_w_ * sample_ratio;
-    data_ = (double *) malloc(size_h_ * size_w_ * num_channels_ * sizeof(double *));
-    for (int p=0; p<size_h_*size_w_*num_channels_; p++)
-        data_[p] = data_gen[p];
-    delete [] data_gen;
-}
-
-void ImgLoader::Downsampling(int sample_ratio) {
-    double *data_gen;
-    data_gen = (double *) malloc(size_h_ * size_w_ * num_channels_ / sample_ratio / sample_ratio * sizeof(double *));
-    for (int k=0; k<num_channels_; k++)
-        for (int i=0; i<size_h_; i++)
-            for (int j=0; j<size_w_; j++)
-                if ((i % sample_ratio == 0) && (j % sample_ratio == 0)){
-                    long index = (i*size_w_*num_channels_/sample_ratio/sample_ratio) + (j*num_channels_/sample_ratio) + k;
-                    long index_src = (i*size_w_*num_channels_) + (j*num_channels_) + k;
-                    data_gen[index] = data_[index_src];
-                }
-    delete [] data_;
-    size_h_ = size_h_ / sample_ratio;
-    size_w_ = size_w_ / sample_ratio;
-    data_ = (double *) malloc(size_h_ * size_w_ * num_channels_ * sizeof(double *));
-    for (int p=0; p<size_h_*size_w_*num_channels_; p++)
-        data_[p] = data_gen[p];
-    delete [] data_gen;
-
-}
 
 void ImgLoader::FetchData(int *shape, unsigned char ***data) {
     shape[0] = size_h_;
@@ -163,4 +101,94 @@ void ImgLoader::FetchData(int *shape, unsigned char ***data) {
         for (int j=0; j<size_w_; j++)
             for (int k=0; k<num_channels_; k++)
                 data[i][j][k] = (unsigned char) int(data_[cnt++] * 255);
+}
+
+void ImgLoader::Imresize(int *shape) {
+    int new_size_h_ = shape[0];
+    int new_size_w_ = shape[1];
+    int new_num_channels_ = shape[2];
+
+    double ratio_h = double(new_size_h_) / double(size_h_);
+    double ratio_w = double(new_size_w_) / double(size_w_);
+
+    double *data_new;
+    data_new = (double *) malloc(sizeof(double *) * new_size_h_ * new_size_w_ * new_num_channels_);
+    for (int k=0; k<new_num_channels_; k++)
+        for (int i=0; i<new_size_h_; i++)
+            for (int j=0; j<new_size_w_; j++){
+                double height_axis = double(i) / ratio_h;
+                double width_axis = double(j) / ratio_w;
+                int q11_id = int(height_axis) * size_w_ * num_channels_ + int(width_axis) * num_channels_ + k;
+                int q12_id = int(height_axis) * size_w_ * num_channels_ + int(width_axis+1) * num_channels_ + k;
+                int q21_id = int(height_axis+1) * size_w_ * num_channels_ + int(width_axis) * num_channels_ + k;
+                int q22_id = int(height_axis+1) * size_w_ * num_channels_ + int(width_axis+1) * num_channels_ + k;
+                int id = i*new_size_w_*new_num_channels_ + j*new_num_channels_ + k;
+                data_new[id] = (height_axis-int(height_axis))*(width_axis-int(width_axis)) * data_[q11_id] +
+                        (height_axis-int(height_axis))*(int(width_axis) + 1 - width_axis) * data_[q12_id] +
+                        (int(height_axis)+1-height_axis)*(width_axis-int(width_axis)) * data_[q21_id] +
+                        (int(height_axis)+1-height_axis)*(int(width_axis) + 1 - width_axis) * data_[q21_id];
+            }
+    delete [] data_;
+    size_w_ = new_size_w_;
+    size_h_ = new_size_h_;
+    num_channels_ = new_num_channels_;
+    data_ = (double *) malloc(sizeof(double *) * new_size_h_ * new_size_w_ * new_num_channels_);
+    for (int i=0; i<new_size_h_*new_size_w_*num_channels_; i++)
+        data_[i] = data_new[i];
+    delete [] data_new;
+
+}
+
+void ImgLoader::Draw_rectangle(int xmin, int xmax, int ymin, int ymax, int COLOR) {
+    float dat[3];
+    if (COLOR==IMG_U8_BLACK){
+        dat[0] = 0;
+        dat[1] = 0;
+        dat[2] = 0;
+    }
+    else if (COLOR==IMG_U8_BLUE){
+        dat[0] = 0;
+        dat[1] = 0;
+        dat[2] = 1;
+    }
+    else if (COLOR==IMG_U8_WHITE){
+        dat[0] = 1;
+        dat[1] = 1;
+        dat[2] = 1;
+    }
+    else if (COLOR==IMG_U8_GREEN){
+        dat[0] = 0;
+        dat[1] = 1;
+        dat[2] = 0;
+    }
+    else if (COLOR==IMG_U8_PURPLE){
+        dat[0] = 1;
+        dat[1] = 0;
+        dat[2] = 1;
+    }
+    else if (COLOR==IMG_U8_YELLO){
+        dat[0] = 0;
+        dat[1] = 1;
+        dat[2] = 1;
+    }
+    else if (COLOR==IMG_U8_RED){
+        dat[0] = 1;
+        dat[1] = 0;
+        dat[2] = 0;
+    }
+    else{
+        std::cerr << "Color not implemented error!" << std::endl;
+        exit(1);
+    }
+
+    for (int k=0; k<num_channels_; k++){
+        for (int i=xmin; i<xmax; i++){
+            data_[ymin*size_w_*num_channels_+i*num_channels_+k] = dat[k];
+            data_[ymax*size_w_*num_channels_+i*num_channels_+k] = dat[k];
+        }
+        for (int i=ymin; i<ymax; i++){
+            data_[i*size_w_*num_channels_+xmin*num_channels_+k] = dat[k];
+            data_[i*size_w_*num_channels_+xmax*num_channels_+k] = dat[k];
+        }
+    }
 }
