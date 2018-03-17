@@ -9,20 +9,20 @@
 #include <cstring>
 
 
-#define MAXRANGE    8
-#define MINRANGE    (-8)
+#define MAXRANGE    2
+#define MINRANGE    (-2)
 
 
-#define NO_QUANTIZE
+//#define NO_QUANTIZE
 
 
 
-float quantize(float num, int bits, int shift){
+double quantize(double num, int bits, int shift){
 #ifdef NO_QUANTIZE
     return num;
 #else
-    float MAXRANGE2 = MAXRANGE;
-    float MINRANGE2 = MINRANGE;
+    double MAXRANGE2 = MAXRANGE;
+    double MINRANGE2 = MINRANGE;
     for (int i=0; i<shift; i++){
         MAXRANGE2 = MAXRANGE2 / 2;
         MINRANGE2 = MINRANGE2 / 2;
@@ -40,10 +40,10 @@ float quantize(float num, int bits, int shift){
         }
         else
             return num;
-    float min_interval = float((MAXRANGE2 - MINRANGE2) / pow(2, bits));
-    float y = num;
-    float res = 0;
-    float step = float(MAXRANGE2 / 2.);
+    double min_interval = double((MAXRANGE2 - MINRANGE2) / pow(2, bits));
+    double y = num;
+    double res = 0;
+    double step = double(MAXRANGE2 / 2.);
     bool flag = false;
     if (y<0){
         flag = true;

@@ -56,6 +56,23 @@ void ImgLoader::Imread(char *fname) {
     jpeg_read_header( &cinfo, TRUE );
     jpeg_start_decompress( &cinfo );
     row_pointer[0] = (unsigned char *)malloc( cinfo.output_width*cinfo.num_components );
+    if ((size_w_ != cinfo.image_width) || (size_h_ != cinfo.image_height) || (num_channels_ != cinfo.num_components)){
+        if ((size_w_ != 0) && (size_w_ != cinfo.image_width)){
+            std::cout << "Warning: JPG width is not the same as default settings." << std::endl;
+            size_w_ = cinfo.image_width;
+        }
+        if ((size_h_ != 0) && (size_h_ != cinfo.image_height)){
+            std::cout << "Warning: JPG height is not the same as default settings." << std::endl;
+            size_h_ = cinfo.image_height;
+        }
+        if ((num_channels_ != 0) && (num_channels_ != cinfo.num_components)){
+            std::cout << "Warning: JPG channel is not the same as default settings." << std::endl;
+            num_channels_ = cinfo.num_components;
+        }
+        delete [] data_;
+        long memcnt = size_h_ * size_w_ * num_channels_;
+        data_ = (double *) malloc(sizeof(double) * memcnt);
+    }
     while( cinfo.output_scanline < cinfo.image_height )
     {
         jpeg_read_scanlines( &cinfo, row_pointer, 1 );
@@ -66,6 +83,7 @@ void ImgLoader::Imread(char *fname) {
     jpeg_destroy_decompress( &cinfo );
     free( row_pointer[0] );
     fclose( infile );
+
 }
 
 void ImgLoader::ImWrite2txt_RGB() {
@@ -192,3 +210,104 @@ void ImgLoader::Draw_rectangle(int xmin, int xmax, int ymin, int ymax, int COLOR
         }
     }
 }
+
+void ImgLoader::Add_label_from_collection(int xmin, int ymin, int font_size, char ch, int COLOR_FG, int COLOR_BG) {
+    ImgLoader img_label;
+    char fname[19] = "../labels/32_0.jpg";
+    fname[10] = char(48+int(ch)/10);
+    fname[11] = char(48+int(ch)%10);
+    fname[12] = '_';
+    fname[13] = char(font_size+48);
+    fname[14] = '.';
+    fname[15] = 'j';
+    fname[16] = 'p';
+    fname[17] = 'g';
+    fname[18] = '\0';
+    img_label.SetImageSize(100, 100, 3);
+    img_label.Imread(fname);
+    if (img_label.num_channels_ == 1){
+        for (int i=0; i<img_label.size_h_; i++)
+            for (int j=0; j<img_label.size_w_; j++){
+                long index_data = (i+xmin) * size_w_ * num_channels_ + (j+ymin) * num_channels_;
+                long index_label = i*img_label.size_w_ + j;
+                if (img_label.data_[index_label] < .1){
+                    if (COLOR_FG==IMG_U8_BLACK){
+                        data_[index_data+0] = 0;
+                        data_[index_data+1] = 0;
+                        data_[index_data+2] = 0;
+                    }
+                    else if (COLOR_FG==IMG_U8_BLUE){
+                        data_[index_data+0] = 0;
+                        data_[index_data+1] = 0;
+                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                    }
+                    else if (COLOR_FG==IMG_U8_WHITE){
+                        data_[index_data+0] = 1 * img_label.data_[index_label];
+                        data_[index_data+1] = 1 * img_label.data_[index_label];
+                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                    }
+                    else if (COLOR_FG==IMG_U8_GREEN){
+                        data_[index_data+0] = 0;
+                        data_[index_data+1] = 1 * img_label.data_[index_label];
+                        data_[index_data+2] = 0;
+                    }
+                    else if (COLOR_FG==IMG_U8_PURPLE){
+                        data_[index_data+0] = 1 * img_label.data_[index_label];
+                        data_[index_data+1] = 0;
+                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                    }
+                    else if (COLOR_FG==IMG_U8_YELLO){
+                        data_[index_data+0] = 0;
+                        data_[index_data+1] = 1 * img_label.data_[index_label];
+                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                    }
+                    else if (COLOR_FG==IMG_U8_RED){
+                        data_[index_data+0] = 1 * img_label.data_[index_label];
+                        data_[index_data+1] = 0;
+                        data_[index_data+2] = 0;
+                    }
+                }
+                else if (img_label.data_[index_label] > .1) {
+                    if (COLOR_BG == IMG_U8_BLACK) {
+                        data_[index_data + 0] = 0;
+                        data_[index_data + 1] = 0;
+                        data_[index_data + 2] = 0;
+                    } else if (COLOR_BG == IMG_U8_BLUE) {
+                        data_[index_data + 0] = 0;
+                        data_[index_data + 1] = 0;
+                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                    } else if (COLOR_BG == IMG_U8_WHITE) {
+                        data_[index_data + 0] = 1. * img_label.data_[index_label];
+                        data_[index_data + 1] = 1. * img_label.data_[index_label];
+                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                    } else if (COLOR_BG == IMG_U8_GREEN) {
+                        data_[index_data + 0] = 0;
+                        data_[index_data + 1] = 1. * img_label.data_[index_label];
+                        data_[index_data + 2] = 0;
+                    } else if (COLOR_BG == IMG_U8_PURPLE) {
+                        data_[index_data + 0] = 1. * img_label.data_[index_label];
+                        data_[index_data + 1] = 0;
+                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                    } else if (COLOR_BG == IMG_U8_YELLO) {
+                        data_[index_data + 0] = 0;
+                        data_[index_data + 1] = 1. * img_label.data_[index_label];
+                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                    } else if (COLOR_BG == IMG_U8_RED) {
+                        data_[index_data + 0] = 1. * img_label.data_[index_label];
+                        data_[index_data + 1] = 0;
+                        data_[index_data + 2] = 0;
+                    }
+                }
+            }
+    }
+    else if (img_label.num_channels_ == 3){
+        for (int k=0; k<img_label.num_channels_; k++)
+            for (int i=0; i<img_label.size_h_; i++)
+                for (int j=0; j<img_label.size_w_; j++){
+                    long index_data = (i+xmin) * size_w_ * num_channels_ + (j+ymin) * num_channels_ + k;
+                    long index_label = i*img_label.size_w_*img_label.num_channels_ + j*img_label.num_channels_+k;
+                    data_[index_data] = img_label.data_[index_label];
+                }
+    }
+}
+

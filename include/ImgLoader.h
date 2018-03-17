@@ -26,6 +26,9 @@ public:
     // Draw shape
     void Draw_rectangle(int xmin, int xmax, int ymin, int ymax, int COLOR);
 
+    // Add Label
+    void Add_label_from_collection(int xmin, int ymin, int font_size, char ch, int COLOR_FG, int COLOR_BG);
+
 
     // Data segment
     double *data_;
