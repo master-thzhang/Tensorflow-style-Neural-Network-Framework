@@ -38,6 +38,13 @@ void Network::AllocateMem(double ***src, const int *shape){
     }
 }
 
+void Network::AllocateMem(int ***src, const int *shape){
+    *src = (int **) malloc(sizeof(int *) * shape[0]);
+    for (int i=0; i<shape[0]; i++){
+        (*src)[i] = (int *) malloc(sizeof(int) * shape[1]);
+    }
+}
+
 void Network::AllocateMem(double **src, const int *shape) {
     *src = (double *) malloc(sizeof(double) * shape[0]);
 }

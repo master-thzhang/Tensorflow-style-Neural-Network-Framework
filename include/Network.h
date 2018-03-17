@@ -11,8 +11,9 @@ public:
     void AllocateMem(double ****src, const int *shape);
     void AllocateMem(double ***src, const int *shape);
     void AllocateMem(double **src, const int *shape);
-    // Initialize weights
+    void AllocateMem(int ***src, const int *shape)
 
+    // Initialize weights
     void FeedData(const int *shape, double *data, double *dst, int bits, int shift_l);
     void FeedData(const int *shape, double *data, double **dst, int bits, int shift_l);
     void FeedData(const int *shape, double *data, double ***dst, int bits, int shift_l);
