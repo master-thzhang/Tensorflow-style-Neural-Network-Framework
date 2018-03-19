@@ -41,17 +41,19 @@ double GetIOU(double *bbox_gt, double *bbox_predicted) {
     return (double) (inter + 0.0) / (aarea + barea - inter + 0.0);
 }
 
-void DoNMS(int num, double **array, double thresh, double **dst, int dst_size, int size_h, int size_w){
+void DoNMS(int num, double **array, double thresh, double **dst, int dst_size){
     // Array is stored in [7x7x2, 5] format.
     if (num>MAXBOX)
         std::cerr << "Too many proposals! Stopping..." << std::endl;
 
     for (int i=0; i<num-1; i++)
         for (int j=i+1; j<num; j++)
-            if (array[i][4]<array[j][4]){
-                double tmp = array[i][4];
-                array[i][4] = array[j][4];
-                array[j][4] = tmp;
+            for (int k=0; k<6; k++){
+                if (array[i][k]<array[j][k]){
+                    double tmp = array[i][k];
+                    array[i][k] = array[j][k];
+                    array[j][k] = tmp;
+                }
             }
 
     bool *vi;
@@ -82,7 +84,7 @@ void DoNMS(int num, double **array, double thresh, double **dst, int dst_size, i
     int cnt = 0;
     for (int i=0; i<num; i++){
         if (vi[i]){
-            for (int j=0; j<5; j++){
+            for (int j=0; j<6; j++){
                 dst[cnt][j] = array[i][j];
             }
             cnt ++;
