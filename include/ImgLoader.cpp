@@ -4,6 +4,7 @@
 
 //#include <cstdlib>
 #include "ImgLoader.h"
+#include "font.h"
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -13,17 +14,21 @@
 #include "jpeglib.h"
 
 
-double absf(double x){
+
+float absf(float x){
     return x>0? x: -x;
 }
-
-
 
 
 ImgLoader::ImgLoader() {
     size_h_ = 0;
     size_w_ = 0;
     num_channels_ = 0;
+}
+
+ImgLoader::~ImgLoader() {
+    delete [] data_;
+
 }
 
 void ImgLoader::SetImageSize(int size_w, int size_h, int num_channels) {
@@ -35,7 +40,7 @@ void ImgLoader::SetImageSize(int size_w, int size_h, int num_channels) {
 
 void ImgLoader::MemAlloc() {
     long memcnt = size_h_ * size_w_ * num_channels_;
-    data_ = (double *) malloc(sizeof(double) * memcnt);
+    data_ = (float *) malloc(sizeof(float) * memcnt);
 }
 
 void ImgLoader::Imread(char *fname) {
@@ -71,18 +76,20 @@ void ImgLoader::Imread(char *fname) {
         }
         delete [] data_;
         long memcnt = size_h_ * size_w_ * num_channels_;
-        data_ = (double *) malloc(sizeof(double) * memcnt);
+        data_ = (float *) malloc(sizeof(float) * memcnt);
     }
     while( cinfo.output_scanline < cinfo.image_height )
     {
         jpeg_read_scanlines( &cinfo, row_pointer, 1 );
         for( i=0; i<cinfo.image_width*cinfo.num_components;i++)
-            data_[location++] = double(row_pointer[0][i]) / 255.;
+            data_[location++] = float(float(row_pointer[0][i]) / 256.);
     }
     jpeg_finish_decompress( &cinfo );
     jpeg_destroy_decompress( &cinfo );
-    free( row_pointer[0] );
     fclose( infile );
+    free( row_pointer[0] );
+
+
 
 }
 
@@ -99,11 +106,11 @@ void ImgLoader::ImWrite2txt_RGB() {
     fp3 = fopen(FP3_W, "w");
     for (long i=0; i<size_w_*size_h_*num_channels_; i++)
         if (i % 3 ==1)
-            fprintf(fp1, "%lf\n", data_[i]);
+            fprintf(fp1, "%f\n", data_[i]);
         else if (i % 3 == 2)
-            fprintf(fp2, "%lf\n", data_[i]);
+            fprintf(fp2, "%f\n", data_[i]);
         else
-            fprintf(fp3, "%lf\n", data_[i]);
+            fprintf(fp3, "%f\n", data_[i]);
     fclose(fp1);
     fclose(fp2);
     fclose(fp3);
@@ -118,44 +125,83 @@ void ImgLoader::FetchData(int *shape, unsigned char ***data) {
     for (int i=0; i<size_h_; i++)
         for (int j=0; j<size_w_; j++)
             for (int k=0; k<num_channels_; k++)
-                data[i][j][k] = (unsigned char) int(data_[cnt++] * 255);
+                data[i][j][k] = (unsigned char) int(data_[cnt++] * 256);
 }
+
 
 void ImgLoader::Imresize(int *shape) {
-    int new_size_h_ = shape[0];
-    int new_size_w_ = shape[1];
-    int new_num_channels_ = shape[2];
+// Baseline: 23ms
+    float time = 0;
 
-    double ratio_h = double(new_size_h_) / double(size_h_);
-    double ratio_w = double(new_size_w_) / double(size_w_);
+#define TRIES   1
+    for (int i2=0; i2<TRIES; i2++){
+        float start = clock();
+        int new_size_h_ = shape[0];
+        int new_size_w_ = shape[1];
+        int new_num_channels_ = shape[2];
 
-    double *data_new;
-    data_new = (double *) malloc(sizeof(double *) * new_size_h_ * new_size_w_ * new_num_channels_);
-    for (int k=0; k<new_num_channels_; k++)
-        for (int i=0; i<new_size_h_; i++)
-            for (int j=0; j<new_size_w_; j++){
-                double height_axis = double(i) / ratio_h;
-                double width_axis = double(j) / ratio_w;
-                int q11_id = int(height_axis) * size_w_ * num_channels_ + int(width_axis) * num_channels_ + k;
-                int q12_id = int(height_axis) * size_w_ * num_channels_ + int(width_axis+1) * num_channels_ + k;
-                int q21_id = int(height_axis+1) * size_w_ * num_channels_ + int(width_axis) * num_channels_ + k;
-                int q22_id = int(height_axis+1) * size_w_ * num_channels_ + int(width_axis+1) * num_channels_ + k;
-                int id = i*new_size_w_*new_num_channels_ + j*new_num_channels_ + k;
-                data_new[id] = (height_axis-int(height_axis))*(width_axis-int(width_axis)) * data_[q11_id] +
-                        (height_axis-int(height_axis))*(int(width_axis) + 1 - width_axis) * data_[q12_id] +
-                        (int(height_axis)+1-height_axis)*(width_axis-int(width_axis)) * data_[q21_id] +
-                        (int(height_axis)+1-height_axis)*(int(width_axis) + 1 - width_axis) * data_[q21_id];
+        float ratio_h = float(new_size_h_) / float(size_h_);
+        float ratio_w = float(new_size_w_) / float(size_w_);
+
+        float ratio_h_inverse = 1 / ratio_h;
+        float ratio_w_inverse = 1 / ratio_w;
+
+        float *data_new;
+        data_new = (float *) malloc(sizeof(float *) * new_size_h_ * new_size_w_ * new_num_channels_);
+
+        long offset1 = num_channels_;
+        long offset2 = size_w_ * num_channels_;
+        long offset3 = new_size_w_ * new_num_channels_;
+        for (int k = 0; k < new_num_channels_; k++) {
+            float height_axis = -ratio_h_inverse;
+            long id_i = -offset3;
+            for (int i = 0; i < new_size_h_; i++) {
+                height_axis += ratio_h_inverse;
+                float width_axis = -ratio_w_inverse;
+                float height_axis_int = int(height_axis);
+                float h_0_dis = height_axis - height_axis_int;
+                float h_1_dis = height_axis_int + 1 - height_axis;
+                id_i += offset3;
+                long id = id_i + k - offset1;
+                for (int j = 0; j < new_size_w_; j++) {
+                    width_axis += ratio_w_inverse;
+                    float width_axis_int = int(width_axis);
+                    float w_0_dis = width_axis - width_axis_int;
+                    float w_1_dis = width_axis_int + 1 - width_axis;
+                    long q11_id = int(height_axis) * offset2 + int(width_axis) * offset1 + k;
+                    id += offset1;
+                    if ((height_axis + 1 >= new_size_h_) || (width_axis + 1 >= new_size_w_))
+                        data_new[id] = data_[q11_id];
+
+                    else
+                        data_new[id] =
+                                (h_0_dis) * (w_0_dis) * data_[q11_id] +
+                                (h_0_dis) * (w_1_dis) * data_[q11_id + offset1] +
+                                (h_1_dis) * (w_0_dis) * data_[q11_id + offset2] +
+                                (h_1_dis) * (w_1_dis) * data_[q11_id + offset1 + offset2];
+                }
             }
-    delete [] data_;
-    size_w_ = new_size_w_;
-    size_h_ = new_size_h_;
-    num_channels_ = new_num_channels_;
-    data_ = (double *) malloc(sizeof(double *) * new_size_h_ * new_size_w_ * new_num_channels_);
-    for (int i=0; i<new_size_h_*new_size_w_*num_channels_; i++)
-        data_[i] = data_new[i];
-    delete [] data_new;
+        }
+        delete[] data_;
+        size_w_ = new_size_w_;
+        size_h_ = new_size_h_;
+        num_channels_ = new_num_channels_;
+        data_ = (float *) malloc(sizeof(float *) * new_size_h_ * new_size_w_ * new_num_channels_);
+        for (int i = 0; i < new_size_h_ * new_size_w_ * num_channels_; i++) {
+            if (absf(data_new[i])<1.1)
+                data_[i] = data_new[i];
+            //std::cout << data_[i] << std::endl;
+        }
+        delete[] data_new;
+        float end = clock();
+        time += (end - start) / 1000;
+    }
+    std::cout << time / TRIES << " ms elapsed for Bilinear Interpolation" << std::endl;
 
 }
+
+
+
 
 void ImgLoader::Draw_rectangle(int xmin, int xmax, int ymin, int ymax, int COLOR) {
     float dat[3];
@@ -212,25 +258,21 @@ void ImgLoader::Draw_rectangle(int xmin, int xmax, int ymin, int ymax, int COLOR
 }
 
 void ImgLoader::Add_label_from_collection(int xmin, int ymin, int font_size, char ch, int COLOR_FG, int COLOR_BG) {
-    ImgLoader img_label;
-    char fname[19] = "../labels/32_0.jpg";
-    fname[10] = char(48+int(ch)/10);
-    fname[11] = char(48+int(ch)%10);
-    fname[12] = '_';
-    fname[13] = char(font_size+48);
-    fname[14] = '.';
-    fname[15] = 'j';
-    fname[16] = 'p';
-    fname[17] = 'g';
-    fname[18] = '\0';
-    img_label.SetImageSize(100, 100, 3);
-    img_label.Imread(fname);
-    if (img_label.num_channels_ == 1){
-        for (int i=0; i<img_label.size_h_; i++)
-            for (int j=0; j<img_label.size_w_; j++){
+
+
+
+        for (int i=0; i<FONT_SHAPE_H; i++)
+            for (int j=0; j<FONT_SHAPE_W; j++){
                 long index_data = (i+xmin) * size_w_ * num_channels_ + (j+ymin) * num_channels_;
-                long index_label = i*img_label.size_w_ + j;
-                if (img_label.data_[index_label] < .1){
+                long index_label = i*FONT_SHAPE_W + j;
+                int code = 0;
+                if ((int(ch) >= 65) && (int(ch) <= 90)){
+                    code = font_upper[int(ch)-65][i/(FONT_SHAPE_H/16)] & (1 << (8-j/(FONT_SHAPE_W/8)));
+                }
+                else {
+                    code = font_lower[int(ch)-97][i/(FONT_SHAPE_H/16)] & (1 << (8-j/(FONT_SHAPE_W/8)));
+                }
+                if (code != 0){
                     if (COLOR_FG==IMG_U8_BLACK){
                         data_[index_data+0] = 0;
                         data_[index_data+1] = 0;
@@ -239,35 +281,36 @@ void ImgLoader::Add_label_from_collection(int xmin, int ymin, int font_size, cha
                     else if (COLOR_FG==IMG_U8_BLUE){
                         data_[index_data+0] = 0;
                         data_[index_data+1] = 0;
-                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                        data_[index_data+2] = 1;
                     }
                     else if (COLOR_FG==IMG_U8_WHITE){
-                        data_[index_data+0] = 1 * img_label.data_[index_label];
-                        data_[index_data+1] = 1 * img_label.data_[index_label];
-                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                        data_[index_data+0] = 1;
+                        data_[index_data+1] = 1;
+                        data_[index_data+2] = 1;
                     }
                     else if (COLOR_FG==IMG_U8_GREEN){
                         data_[index_data+0] = 0;
-                        data_[index_data+1] = 1 * img_label.data_[index_label];
+                        data_[index_data+1] = 1;
                         data_[index_data+2] = 0;
                     }
                     else if (COLOR_FG==IMG_U8_PURPLE){
-                        data_[index_data+0] = 1 * img_label.data_[index_label];
+                        data_[index_data+0] = 1;
                         data_[index_data+1] = 0;
-                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                        data_[index_data+2] = 1;
                     }
                     else if (COLOR_FG==IMG_U8_YELLO){
                         data_[index_data+0] = 0;
-                        data_[index_data+1] = 1 * img_label.data_[index_label];
-                        data_[index_data+2] = 1 * img_label.data_[index_label];
+                        data_[index_data+1] = 1;
+                        data_[index_data+2] = 1;
                     }
                     else if (COLOR_FG==IMG_U8_RED){
-                        data_[index_data+0] = 1 * img_label.data_[index_label];
+                        data_[index_data+0] = 1;
                         data_[index_data+1] = 0;
                         data_[index_data+2] = 0;
                     }
                 }
-                else if (img_label.data_[index_label] > .1) {
+                else
+                 {
                     if (COLOR_BG == IMG_U8_BLACK) {
                         data_[index_data + 0] = 0;
                         data_[index_data + 1] = 0;
@@ -275,39 +318,31 @@ void ImgLoader::Add_label_from_collection(int xmin, int ymin, int font_size, cha
                     } else if (COLOR_BG == IMG_U8_BLUE) {
                         data_[index_data + 0] = 0;
                         data_[index_data + 1] = 0;
-                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                        data_[index_data + 2] = 1;
                     } else if (COLOR_BG == IMG_U8_WHITE) {
-                        data_[index_data + 0] = 1. * img_label.data_[index_label];
-                        data_[index_data + 1] = 1. * img_label.data_[index_label];
-                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                        data_[index_data + 0] = 1;
+                        data_[index_data + 1] = 1;
+                        data_[index_data + 2] = 1;
                     } else if (COLOR_BG == IMG_U8_GREEN) {
                         data_[index_data + 0] = 0;
-                        data_[index_data + 1] = 1. * img_label.data_[index_label];
+                        data_[index_data + 1] = 1;
                         data_[index_data + 2] = 0;
                     } else if (COLOR_BG == IMG_U8_PURPLE) {
-                        data_[index_data + 0] = 1. * img_label.data_[index_label];
+                        data_[index_data + 0] = 1;
                         data_[index_data + 1] = 0;
-                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                        data_[index_data + 2] = 1;
                     } else if (COLOR_BG == IMG_U8_YELLO) {
                         data_[index_data + 0] = 0;
-                        data_[index_data + 1] = 1. * img_label.data_[index_label];
-                        data_[index_data + 2] = 1. * img_label.data_[index_label];
+                        data_[index_data + 1] = 1;
+                        data_[index_data + 2] = 1;
                     } else if (COLOR_BG == IMG_U8_RED) {
-                        data_[index_data + 0] = 1. * img_label.data_[index_label];
+                        data_[index_data + 0] = 1;
                         data_[index_data + 1] = 0;
                         data_[index_data + 2] = 0;
                     }
                 }
             }
-    }
-    else if (img_label.num_channels_ == 3){
-        for (int k=0; k<img_label.num_channels_; k++)
-            for (int i=0; i<img_label.size_h_; i++)
-                for (int j=0; j<img_label.size_w_; j++){
-                    long index_data = (i+xmin) * size_w_ * num_channels_ + (j+ymin) * num_channels_ + k;
-                    long index_label = i*img_label.size_w_*img_label.num_channels_ + j*img_label.num_channels_+k;
-                    data_[index_data] = img_label.data_[index_label];
-                }
-    }
+
+
 }
 

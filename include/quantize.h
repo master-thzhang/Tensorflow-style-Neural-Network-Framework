@@ -13,7 +13,7 @@
 #define MINRANGE    (-2)
 
 
-//#define NO_QUANTIZE
+#define NO_QUANTIZE
 
 
 

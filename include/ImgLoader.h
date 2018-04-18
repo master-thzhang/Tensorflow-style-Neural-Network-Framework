@@ -13,15 +13,19 @@
 #define IMG_U8_YELLO    5
 #define IMG_U8_PURPLE   6
 
+#define IMG_U8_NO       7
+
 class ImgLoader {
 public:
     ImgLoader();
+    ~ImgLoader();
     void SetImageSize(int size_w, int size_h, int num_channels);
     void MemAlloc();
     void Imread(char *fname);
     void ImWrite2txt_RGB();
     void FetchData(int shape[], unsigned char ***data);
     void Imresize(int *shape);
+    
 
     // Draw shape
     void Draw_rectangle(int xmin, int xmax, int ymin, int ymax, int COLOR);
@@ -31,7 +35,7 @@ public:
 
 
     // Data segment
-    double *data_;
+    float *data_;
     int size_w_, size_h_, num_channels_;
 };
 
